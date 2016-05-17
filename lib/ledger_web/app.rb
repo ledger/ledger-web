@@ -2,6 +2,7 @@ require 'rubygems'
 require 'sinatra/base'
 require 'sinatra/contrib'
 require 'sinatra/session'
+require 'docverter'
 
 module LedgerWeb
   class Application < Sinatra::Base
@@ -15,7 +16,7 @@ module LedgerWeb
     helpers LedgerWeb::Helpers
 
     def find_template(views, name, engine, &block)
-      _views = LedgerWeb::Config.instance.get(:report_directories) + [File.join(File.dirname(__FILE__), 'views')]
+      _views = LedgerWeb::Config.instance.get(:report_directories) + LedgerWeb::Config.instance.get(:additional_view_directories) + [File.join(File.dirname(__FILE__), 'views')]
       Array(_views).each { |v| super(v, name, engine, &block) }
     end
 
@@ -39,8 +40,8 @@ module LedgerWeb
         session[:from] = Date.new(today.year - 1, today.month, today.day).strftime('%Y/%m/%d')
         session[:to] = today.strftime('%Y/%m/%d')
       else
-        session[:from] = Date.strptime(params[:from], '%Y/%m/%d').strftime('%Y/%m/%d')
-        session[:to] = Date.strptime(params[:to], '%Y/%m/%d').strftime('%Y/%m/%d')
+        session[:from] = Date.parse(params[:from]).strftime('%Y/%m/%d')
+        session[:to] = Date.parse(params[:to]).strftime('%Y/%m/%d')
       end
 
       redirect back
@@ -49,6 +50,21 @@ module LedgerWeb
     get '/reports/:name' do
       begin
         erb params[:name].to_sym
+      rescue Exception => e
+        @error = e
+        erb :error
+      end
+    end
+
+    get '/pdf/:name' do
+      begin
+        res = Docverter::Conversion.run do |c|
+          c.from = 'html'
+          c.to = 'pdf'
+          c.content = erb(params[:name].to_sym, layout: :pdf)
+        end
+        content_type 'application/pdf'
+        return res
       rescue Exception => e
         @error = e
         erb :error

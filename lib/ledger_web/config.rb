@@ -91,6 +91,7 @@ module LedgerWeb
         config.set :port,               "9090"
         config.set :ledger_file,        ENV['LEDGER_FILE']
         config.set :report_directories, ["#{File.dirname(__FILE__)}/reports"]
+        config.set :additional_view_directories, []
         config.set :session_secret,     'SomethingSecretThisWayPassed'
         config.set :session_expire,     60*60
         config.set :watch_interval,     5
@@ -98,14 +99,14 @@ module LedgerWeb
         config.set :ledger_bin_path,    "ledger"
 
         config.set :ledger_format, "%(quoted(xact.beg_line)),%(quoted(date)),%(quoted(payee)),%(quoted(account)),%(quoted(commodity)),%(quoted(quantity(scrub(display_amount)))),%(quoted(cleared)),%(quoted(virtual)),%(quoted(join(note | xact.note))),%(quoted(cost))\n"
+        config.set :ledger_columns, [ :xtn_id, :xtn_date, :note, :account, :commodity, :amount, :cleared, :virtual, :tags, :cost ]
 
         config.set :price_lookup_skip_symbols, ['$']
 
         func = Proc.new do |symbol, min_date, max_date|
-          LedgerWeb::YahooPriceLookup.new(symbol, min_date, max_date).lookup
+          LedgerWeb::YahooPriceLookup.new(symbol, min_date - 1, max_date).lookup
         end
         config.set :price_function, func
-
       end
     end
   end
